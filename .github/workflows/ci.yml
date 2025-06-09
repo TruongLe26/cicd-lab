@@ -124,6 +124,13 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ${{ env.CONTAINER_TEST_IMAGE }}
+
+      - name: Verify Docker Compose V2
+        run: |
+          docker compose version || { echo "docker compose not found"; exit 1; }
+
       - name: Run docker-compose up
         run: |
+          docker compose -f compose.yaml down -v || { echo "docker compose down failed"; exit 1; }
           docker compose -f compose.yaml up -d || { echo "docker compose failed"; exit 1; }
+          docker compose ps
