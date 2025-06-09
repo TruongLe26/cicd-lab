@@ -126,4 +126,4 @@ jobs:
           docker push ${{ env.CONTAINER_TEST_IMAGE }}
       - name: Run docker-compose up
         run: |
-          docker-compose -f compose.yaml up -d
+          docker compose -f compose.yaml up -d || { echo "docker compose failed"; exit 1; }
