@@ -18,6 +18,7 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
+    // Retrieve the first customer
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public CustomerDto getFirstCustomer() {
