@@ -9,12 +9,12 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3308:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 15s
-      timeout: 10s
-      retries: 15
-      start_period: 120s
+#    healthcheck:
+#      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+#      interval: 15s
+#      timeout: 10s
+#      retries: 15
+#      start_period: 120s
     volumes:
       - mysql-data:/var/lib/mysql
   app:
@@ -26,8 +26,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "8080:8080"
-    depends_on:
-      mysql:
-        condition: service_healthy
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
 volumes:
   mysql-data:
