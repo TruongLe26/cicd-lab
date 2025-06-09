@@ -84,7 +84,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ build, test ]
     env:
-      CONTAINER_TEST_IMAGE: ${{ env.CONTAINER_TEST_IMAGE }}
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
       MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
       MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
