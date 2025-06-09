@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  CONTAINER_TEST_IMAGE: ghcr.io/${{ github.repository }}/${{ github.sha }}
+  CONTAINER_TEST_IMAGE: ghcr.io/${{ github.repository.toLowerCase() }}/${{ github.sha }}
 
 jobs:
   build:
