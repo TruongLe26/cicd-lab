@@ -5,9 +5,9 @@ env:
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   build:
@@ -83,12 +83,13 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     env:
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
       MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
       MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      DATABASE_URL: ${{ vars.DATABASE_URL }}
+      DATABASE_URL: jdbc:mysql://localhost:3308/cicd
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
