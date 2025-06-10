@@ -89,7 +89,7 @@ jobs:
       MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
       MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
       MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      DATABASE_URL: ${{ vars.DATABASE_URL }}
+      DATABASE_URL: jdbc:mysql://localhost:3308/cicd
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
