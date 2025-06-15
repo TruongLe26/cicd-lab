@@ -31,6 +31,9 @@ jobs:
     name: Run Tests (via custom action)
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
       - name: Use test action
         id: test-step
         uses: ./.github/actions/test
