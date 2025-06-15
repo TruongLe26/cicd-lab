@@ -1,115 +1,123 @@
 name: CI Pipeline
 
-env:
-  CONTAINER_TEST_IMAGE: ghcr.io/truongle26/cicd-lab:${{ github.sha }}
-
 on:
   push:
-    branches: [main]
+    branches: [ 'develop', 'feature/**' ]
   pull_request:
-    branches: [main]
+    branches: [ 'develop' ]
 
 jobs:
-  build:
-    name: Build
+  check:
+    name: Code Quality Checks
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: maven-${{ github.repository }}
-          restore-keys: maven-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'corretto'
-          java-version: '21'
-      - name: Make Maven wrapper executable
-        run: chmod +x ./mvnw
-      - name: Build with Maven (skip tests)
-        run: ./mvnw clean package -DskipTests
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app
-          path: target/*.jar
-
-#  test:
-#    name: Run Tests
-#    runs-on: ubuntu-latest
-#    needs: build
-#    env:
-#      DATABASE_URL: ${{ vars.DATABASE_URL }}
-#      MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
-#      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-#    services:
-#        mysql:
-#          image: mysql:8.0.33
-#          ports:
-#            - 3308:3306
-#          env:
-#            MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-#            MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-#            MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
-#            MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-#          options: >-
-#            --health-cmd="mysqladmin ping -h localhost"
-#            --health-interval=10s
-#            --health-timeout=5s
-#            --health-retries=10
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v3
-#      - name: Set up JDK 21
-#        uses: actions/setup-java@v3
-#        with:
-#          distribution: 'corretto'
-#          java-version: '21'
-#      - name: Restore Maven cache
-#        uses: actions/cache@v3
-#        with:
-#          path: ~/.m2/repository
-#          key: maven-${{ github.repository }}
-#          restore-keys: maven-
-#      - name: Make Maven wrapper executable
-#        run: chmod +x ./mvnw
-#      - name: Run tests
-#        run: ./mvnw test
-
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    needs: build
-    env:
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-      MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
-      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-      DATABASE_URL: jdbc:mysql://mysql:3306/cicd
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-      - name: Download app JAR
+
+      - name: Set up JDK 17 (with Maven cache)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: maven
+
+      - name: Spotless (format check)
+        run: mvn -B spotless:apply spotless:check
+
+      - name: SpotBugs
+        run: mvn -B spotbugs:check
+
+  build:
+    name: Compile, Test & Package
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17 (with Maven cache)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: maven
+
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Build, test and SonarQube analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_NAME" == "main" ]]; then
+            echo "Running with SonarQube analysis..."
+            mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=test-cicd
+          else
+            echo "Running regular verify only..."
+            mvn -B verify
+          fi
+
+      - name: Archive JAR artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cicd-lab.jar
+          path: target/cicd-lab.jar
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 (with Maven cache)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        run: chmod +x ./mvnw
+
+      - name: Run tests
+        run: ./mvnw test
+
+  publish:
+    name: Publish Docker Image to GHCR
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Download JAR from build job
         uses: actions/download-artifact@v4
         with:
-          name: app
-          path: target
+          name: cicd-lab.jar
+          path: .
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-#      - name: Set lowercase owner and repo names
-#        run: |
-#          echo "OWNER_LC=${OWNER,,}" >> $GITHUB_ENV
-#          echo "REPO_LC=${REPO##*/,,}" >> $GITHUB_ENV
-#        env:
-#          OWNER: ${{ github.repository_owner }}
-#          REPO: ${{ github.repository }}
-#
-#      - name: Set CONTAINER_TEST_IMAGE env
-#        run: echo "CONTAINER_TEST_IMAGE=ghcr.io/${{ env.OWNER_LC }}/${{ env.REPO_LC }}:${{ github.sha }}" >> $GITHUB_ENV
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -118,19 +126,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ env.CONTAINER_TEST_IMAGE }} .
-      - name: Push Docker image
-        run: |
-          docker push ${{ env.CONTAINER_TEST_IMAGE }}
+      - name: Set lower case image name
+        run: echo "REPO_NAME_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
-      - name: Verify Docker Compose V2
-        run: |
-          docker compose version || { echo "docker compose not found"; exit 1; }
-
-      - name: Run docker-compose up
-        run: |
-          docker compose -f compose.yaml down -v || { echo "docker compose down failed"; exit 1; }
-          docker compose -f compose.yaml up -d || { echo "docker compose failed"; exit 1; }
-          docker compose ps
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_NAME_LC }}:latest
+            ghcr.io/${{ env.REPO_NAME_LC }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

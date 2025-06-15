@@ -9,24 +9,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
-    private final CustomerRepository customerRepository;
+  private final CustomerRepository customerRepository;
 
-    public CustomerServiceImpl(CustomerRepository customerRepository) {
-        this.customerRepository = customerRepository;
-    }
+  public CustomerServiceImpl(CustomerRepository customerRepository) {
+    this.customerRepository = customerRepository;
+  }
 
-    @PostConstruct
-    public void initData() {
-        if (customerRepository.count() == 0) {
-            customerRepository.save(new Customer("Demo User"));
-        }
+  @PostConstruct
+  public void initData() {
+    if (customerRepository.count() == 0) {
+      customerRepository.save(new Customer("Demo User"));
     }
+  }
 
-    @Override
-    public CustomerDto getFirstCustomer() {
-        Customer customer = customerRepository.findAll().stream()
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("No customers found")); // Temporary exception handling
-        return new CustomerDto(customer.getName());
-    }
+  @Override
+  public CustomerDto getFirstCustomer() {
+    Customer customer =
+        customerRepository.findAll().stream()
+            .findFirst()
+            .orElseThrow(
+                () -> new RuntimeException("No customers found")); // Temporary exception handling
+    return new CustomerDto(customer.getName());
+  }
 }

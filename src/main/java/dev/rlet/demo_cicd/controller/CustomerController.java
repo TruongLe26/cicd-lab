@@ -12,16 +12,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/users")
 public class CustomerController {
 
-    private final CustomerService customerService;
+  private final CustomerService customerService;
 
-    public CustomerController(CustomerService customerService) {
-        this.customerService = customerService;
-    }
+  public CustomerController(CustomerService customerService) {
+    this.customerService = customerService;
+  }
 
-    // Retrieve the first customer
-    @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public CustomerDto getFirstCustomer() {
-        return customerService.getFirstCustomer();
-    }
+  // Retrieve the first customer
+  @GetMapping
+  @ResponseStatus(HttpStatus.OK)
+  public CustomerDto getFirstCustomer() {
+    return customerService.getFirstCustomer();
+  }
 }
