@@ -28,24 +28,18 @@ jobs:
         run: mvn -B spotbugs:check
 
   test:
-    name: Run Tests
+    name: Run Tests (via custom action)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Use test action
+        id: test-step
+        uses: ./.github/actions/test
 
-      - name: Set up JDK 17 (with Maven cache)
-        uses: actions/setup-java@v4
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: maven
-
-      - name: Make Maven wrapper executable
-        run: chmod +x ./mvnw
-
-      - name: Run tests
-        run: ./mvnw test -Dspring.profiles.active=test -X
+          name: test-report
+          path: ${{ steps.test-step.outputs.report-path }}
 
   build:
     name: Compile, Test & Package

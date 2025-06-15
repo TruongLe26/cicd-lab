@@ -1,0 +1,43 @@
+name: "Run Tests"
+description: "Set up JDK 17, Maven, and run tests with test profile"
+
+inputs:
+  profile:
+    description: "Spring profile to use"
+    required: false
+    default: "test"
+  debug:
+    description: "Enable Maven debug output (-X)"
+    required: false
+    default: "false"
+
+outputs:
+  report-path:
+    description: "Path to the test reports"
+    value: ${{ steps.set-report-path.outputs.report-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Checkout code"
+      uses: actions/checkout@v4
+
+    - name: "Set up JDK 17 (with Maven cache)"
+      uses: actions/setup-java@v4
+      with:
+        distribution: "temurin"
+        java-version: "17"
+        cache: maven
+
+    - name: Make Maven wrapper executable
+      shell: bash
+      run: chmod +x ./mvnw
+
+    - name: "Run tests"
+      shell: bash
+      run: ./mvnw test -B --fail-at-end -Dspring.profiles.active="${{ inputs.profile }}" ${{ inputs.debug == 'true' && '-X' || '' }}
+
+    - name: "Set output for report path"
+      id: set-report-path
+      shell: bash
+      run: echo "report-path=target/surefire-reports" >> $GITHUB_OUTPUT
