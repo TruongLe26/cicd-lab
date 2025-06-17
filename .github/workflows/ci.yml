@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -21,11 +21,15 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Spotless (format check)
-        run: mvn -B spotless:apply spotless:check
+      - name: Make Maven wrapper executable
+        shell: bash
+        run: chmod +x ./mvnw
+
+      - name: Spotless (format check only)
+        run: ./mvnw -B spotless:check
 
       - name: SpotBugs
-        run: mvn -B spotbugs:check
+        run: ./mvnw -B spotbugs:check
 
   test:
     name: Run Tests (via custom action)
@@ -37,6 +41,10 @@ jobs:
       - name: Use test action
         id: test-step
         uses: ./.github/actions/test
+
+      - name: Print test summary
+        if: always()
+        run: cat target/surefire-reports/*.txt || true
 
       - name: Upload test report
         uses: actions/upload-artifact@v4
@@ -78,16 +86,11 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_NAME" == "main" ]]; then
-            echo "Running with SonarQube analysis..."
-            mvn -B verify \
-              org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-              -Dsonar.projectKey=test-cicd \
-              -DskipTests=true
-          else
-            echo "Running regular verify only..."
-            mvn -B verify -DskipTests=true
-          fi
+          echo "Running with SonarQube analysis..."
+          mvn -B verify \
+            org.sonarsource.scanner.maven:sonar-maven-plugin:5.1.0.4751:sonar \
+            -Dsonar.projectKey=cicd-lab \
+            -DskipTests=true
 
       - name: Archive JAR artifact
         if: success()
@@ -100,7 +103,7 @@ jobs:
     name: Publish Docker Image to GHCR
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
