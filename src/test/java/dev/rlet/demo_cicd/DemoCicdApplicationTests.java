@@ -7,9 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class DemoCicdApplicationTests {
 
-	@Disabled("Disabled temporarily")
-	@Test
-	void contextLoads() {
-	}
-
+  @Disabled("Disabled temporarily")
+  @Test
+  void contextLoads() {}
 }
